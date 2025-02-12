@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teachable Machine Image Model</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+    font-family: 'Orbitron', 'Rajdhani', sans-serif;
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24"><path fill="%2300AEFF" d="M13 2L3 14h8l-1 8 11-16h-8z"/></svg>'), auto;
+}
+
+h1 {
+    text-shadow: 0 0 10px rgba(0, 174, 255, 1), 0 0 20px rgba(0, 174, 255, 1);
+}
+
+.progress-container {
+    position: relative;
+    width: 100%;
+    height: 30px;
+    background: #222;
+    border-radius: 20px;
+    box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #00f7ff, #0077ff);
+    box-shadow: 0px 0px 15px rgba(0, 174, 255, 1);
+    text-align: center;
+    font-size: 16px;
+    font-weight: bold;
+    line-height: 30px;
+    color: white;
+    transition: width 0.5s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+.progress-bar:hover {
+    box-shadow: 0px 0px 25px rgba(0, 174, 255, 1);
+}
+
+@media (max-width: 768px) {
+    .flex-wrap {
+        flex-direction: column;
+    }
+
+    .text-left {
+        text-align: center;
+    }
+
+    .pl-8 {
+        padding-left: 0;
+    }
+}
+
+.fade-in-left {
+    animation: fadeInLeft 1s forwards;
+}
+
+.fade-in-right {
+    animation: fadeInRight 1s forwards;
+}
+
+@keyframes fadeInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeInRight {
+    from {
+        opacity: 0;
+        transform: translateX(50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.scanner-3d {
+    perspective: 1000px;
+}
+
+#webcam-container canvas {
+    width: 500px;
+    height: 500px;
+    border: 5px solid #00aeff;
+    border-radius: 20px;
+    box-shadow: 0 0 30px rgba(0, 174, 255, 0.8), 0 0 60px rgba(0, 174, 255, 0.6);
+    transform: rotateY(10deg);
+    transition: transform 0.5s;
+}
+
+#webcam-container canvas:hover {
+    transform: rotateY(0deg);
+}
+
+#back-to-top {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    opacity: 1;
+    transition: opacity 0.5s ease-in-out;
+}
+
+#back-to-top.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+    </style>
+</head>
+<body class="bg-gradient-to-b from-blue-900 to-blue-500 text-white min-h-screen flex flex-col items-start pl-8">
+
+    <!-- Custom Cursor -->
+    <div class="custom-cursor"></div>
+
+    <!-- Introduction Section -->
+    <section class="flex flex-wrap items-center justify-center w-full min-h-screen px-8 fade-in-left">
+        <div class="w-full md:w-1/2 text-left">
+            <h1 class="text-4xl font-bold mb-4">Teachable Machine Image Model</h1>
+            <p class="text-lg leading-relaxed mb-6">
+                Teachable Machine Image Model is an AI-powered tool that uses machine learning to recognize and classify images in real-time.
+                Simply start the model, allow webcam access, and watch as it predicts and labels objects instantly. No coding expertise is required—just train, upload, and test your model effortlessly!
+            </p>
+            <button id="start-button" onclick="scrollToScanner()" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 shadow-lg">
+                Start Scanning
+            </button>
+        </div>
+    </section>
+
+    <!-- Scanner Section -->
+    <section id="scanner" class="w-full flex flex-col items-center justify-center py-12 fade-in-right">
+        <div class="flex flex-wrap items-start justify-center w-full">
+            <div id="webcam-container" class="mb-8 scanner-3d"></div>
+            <div id="label-container" class="w-full md:w-1/2 space-y-6 ml-8"></div>
+        </div>
+        <div id="scanned-label" class="text-2xl font-bold mt-4"></div>
+    </section>
+
+    <!-- Back to Top Button -->
+    <button id="back-to-top" onclick="scrollToTop()" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full fixed bottom-4 right-4 transition duration-300 shadow-lg">
+        ↑ Top
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+    <script>
+        const URL = "./my_model/";
+        let model, webcam, labelContainer, maxPredictions;
+        let webcamInitialized = false; // Flag to check if webcam is initialized
+
+        document.addEventListener("DOMContentLoaded", () => {
+            init(); // Initialize the webcam and model when the page loads
+            window.addEventListener('scroll', handleScroll); // Add scroll event listener
+            handleScroll(); // Initial check
+        });
+
+        // Scroll down to the scanner
+        function scrollToScanner() {
+            document.getElementById("scanner").scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Scroll to the top of the page
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Handle scroll event to show/hide the back-to-top button
+        function handleScroll() {
+            const backToTopButton = document.getElementById('back-to-top');
+            if (window.scrollY === 0) {
+                backToTopButton.classList.add('hidden');
+            } else {
+                backToTopButton.classList.remove('hidden');
+            }
+        }
+
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            const flip = true;
+            webcam = new tmImage.Webcam(500, 500, flip);
+            await webcam.setup();
+            await webcam.play();
+            window.requestAnimationFrame(loop);
+
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            labelContainer = document.getElementById("label-container");
+            labelContainer.innerHTML = ""; // Clear previous labels
+
+            for (let i = 0; i < maxPredictions; i++) {
+                let labelText = document.createElement("p");
+                labelText.className = "mb-2 text-lg font-semibold";
+
+                let container = document.createElement("div");
+                container.className = "progress-container";
+
+                let progress = document.createElement("div");
+                progress.className = "progress-bar";
+                progress.style.width = "0%"; // Start at 0%
+
+                container.appendChild(progress);
+                labelContainer.appendChild(labelText);
+                labelContainer.appendChild(container);
+            }
+        }
+
+        async function loop() {
+            webcam.update();
+            await predict();
+            window.requestAnimationFrame(loop);
+        }
+
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            let highestPrediction = { className: "", probability: 0 };
+
+            for (let i = 0; i < maxPredictions; i++) {
+                const percentage = (prediction[i].probability * 100).toFixed(2) + "%";
+                labelContainer.children[i * 2].innerHTML = `${prediction[i].className}: ${percentage}`;
+
+                let progressBar = labelContainer.children[i * 2 + 1].firstChild;
+                progressBar.style.width = percentage;
+
+                if (prediction[i].probability > highestPrediction.probability) {
+                    highestPrediction = prediction[i];
+                }
+            }
+
+            document.getElementById("scanned-label").innerHTML = `Scanned: ${highestPrediction.className}`;
+        }
+    </script>
+</body>
+</html>
