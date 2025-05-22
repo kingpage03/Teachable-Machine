@@ -120,12 +120,40 @@ h1 {
     opacity: 0;
     pointer-events: none;
 }
+
+#go-back-button {
+    box-shadow: 0 0 15px rgba(0, 174, 255, 0.8);
+    border: 1px solid rgba(0, 174, 255, 0.5);
+    animation: fadeInLeft 0.8s forwards;
+}
+
+#go-back-button:hover {
+    box-shadow: 0 0 25px rgba(0, 174, 255, 1);
+    transform: translateX(-5px);
+}
+
+@media (max-width: 768px) {
+    #go-back-button {
+        top: 1rem;
+        left: 1rem;
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+}
     </style>
 </head>
 <body class="bg-gradient-to-b from-blue-900 to-blue-500 text-white min-h-screen flex flex-col items-start pl-8">
 
     <!-- Custom Cursor -->
     <div class="custom-cursor"></div>
+    
+    <!-- Go Back Button -->
+    <a href="https://portfolio-page-omega-eight.vercel.app/" id="go-back-button" class="fixed top-6 left-6 bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 shadow-lg flex items-center z-10">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+        </svg>
+        Back to Portfolio
+    </a>
 
     <!-- Introduction Section -->
     <section class="flex flex-wrap items-center justify-center w-full min-h-screen px-8 fade-in-left">
